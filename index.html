@@ -13,13 +13,13 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#e9eef2; --note:#ffffff; --bar:#5bc0e8; --barink:#1d3440; --ink:#1d262d; --sub:#5e6d78; --line:#d5dde3; --hit:#e3f4fb; --field:#f4f7f9;
+  --bg:#e9eef2; --note:#ffffff; --bar:#5bc0e8; --barink:#1d3440; --ink:#1d262d; --sub:#5e6d78; --line:#d5dde3; --hit:#e3f4fb; --field:#f4f7f9; --warn:#c0392b;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme: dark){
-  :root{ --bg:#1f2226; --note:#323335; --ink:#f1f3f4; --sub:#a4adb4; --line:#45484c; --hit:#3b4a52; --field:#2a2b2d; }
+  :root{ --bg:#1f2226; --note:#323335; --ink:#f1f3f4; --sub:#a4adb4; --line:#45484c; --hit:#3b4a52; --field:#2a2b2d; --warn:#ff8a7a; }
 }
 *,*::before,*::after{box-sizing:inherit}
 body{margin:0; background:var(--bg); color:var(--ink); font-family:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif; font-size:16px; line-height:1.5}
@@ -31,10 +31,12 @@ body{margin:0; background:var(--bg); color:var(--ink); font-family:"IBM Plex San
 .chip{font:inherit; font-size:14px; border:1px solid var(--line); background:transparent; color:var(--ink); padding:6px 12px; border-radius:16px; cursor:pointer}
 .chip[aria-pressed="true"]{background:var(--bar); border-color:var(--bar); color:var(--barink); font-weight:600}
 .chip.sm{font-size:13px; padding:5px 11px; background:var(--field)}
+.chip.sm[aria-pressed="true"]{background:var(--bar); color:var(--barink)}
 .chip.sm:active{background:var(--hit)}
 .chip.site{border-color:var(--bar)}
 .days input[type=date]{font:inherit; font-size:14px; color:var(--ink); background:var(--field); border:1px solid var(--line); border-radius:16px; padding:5px 10px; max-width:160px}
 .hdr{font-size:19px; font-weight:600; margin:14px 0 4px; word-break:keep-all}
+.warn{color:var(--warn); font-size:13px}
 label{display:block; font-size:13px; color:var(--sub); margin:12px 0 4px}
 .qlabel{display:block; font-size:12px; color:var(--sub); margin:10px 0 4px}
 .chips{display:flex; flex-wrap:wrap; gap:6px}
@@ -55,7 +57,7 @@ details summary{cursor:pointer; color:var(--sub); font-size:14px; padding:10px 0
 .hist .s{display:block; font-size:13px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:360px}
 .hist button.del{font:inherit; font-size:13px; background:transparent; border:0; color:var(--sub); padding:8px; cursor:pointer}
 .empty{font-size:13px; color:var(--sub); padding:4px 0 8px}
-.cfg textarea{min-height:110px; font-size:14px}
+.cfg textarea{min-height:100px; font-size:14px}
 .save{margin-top:10px; font:inherit; font-size:14px; padding:8px 16px; border:0; border-radius:4px; background:var(--bar); color:var(--barink); font-weight:600; cursor:pointer}
 .toast{position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%) translateY(20px); background:#1d262d; color:#fff; padding:10px 18px; border-radius:20px; font-size:14px; opacity:0; transition:.2s; pointer-events:none}
 .toast.on{opacity:1; transform:translateX(-50%) translateY(0)}
@@ -72,6 +74,9 @@ details summary{cursor:pointer; color:var(--sub); font-size:14px; padding:10px 0
       <input type="date" id="pick" aria-label="날짜 선택">
     </div>
     <div class="hdr" id="hdr"></div>
+    <div class="warn" id="nameWarn" hidden>아래 설정에서 이름을 먼저 입력하세요</div>
+    <span class="qlabel">동행 (같이 간 직원을 누르면 헤더에 추가)</span>
+    <div class="chips" id="team"></div>
     <label for="body">업무 내용 (한 줄에 하나씩, "- "는 자동으로 붙습니다)</label>
     <textarea id="body" placeholder="현장 버튼 → 업무 버튼 순서로 누르면 한 줄이 완성됩니다"></textarea>
     <span class="qlabel">현장 (누르면 새 줄로 입력)</span>
@@ -79,7 +84,7 @@ details summary{cursor:pointer; color:var(--sub); font-size:14px; padding:10px 0
     <span class="qlabel">업무 문구</span>
     <div class="chips" id="phr"></div>
     <label for="tail">마무리 문구 (선택)</label>
-    <input type="text" id="tail" placeholder="공항철도 운서역 현퇴합니다">
+    <input type="text" id="tail" placeholder="○○ 현퇴합니다">
     <div class="chips" id="tails" style="margin-top:6px"></div>
     <div class="acts">
       <button class="btn main" id="copyAll">전체 복사</button>
@@ -92,10 +97,12 @@ details summary{cursor:pointer; color:var(--sub); font-size:14px; padding:10px 0
       <summary>지난 보고</summary>
       <ul class="hist" id="hist"></ul>
     </details>
-    <details class="cfg">
-      <summary>설정 (이름·현장·문구·공휴일)</summary>
-      <label for="name">이름</label>
-      <input id="name" type="text">
+    <details class="cfg" id="cfgBox">
+      <summary>설정 (이름·팀·현장·문구·공휴일)</summary>
+      <label for="name">내 이름</label>
+      <input id="name" type="text" placeholder="홍길동">
+      <label for="cfgTeam">팀 직원 (한 줄에 하나, 동행 버튼으로 표시)</label>
+      <textarea id="cfgTeam"></textarea>
       <label for="cfgSites">고정 현장 (한 줄에 하나, 항상 앞쪽에 표시)</label>
       <textarea id="cfgSites"></textarea>
       <label for="cfgPhr">업무 문구 (한 줄에 하나)</label>
@@ -110,19 +117,30 @@ details summary{cursor:pointer; color:var(--sub); font-size:14px; padding:10px 0
 </div>
 <div class="toast" id="toast"></div>
 <script>
-var DEFAULT_NAME = "이두성";
 var DEFAULT_HOL = ["2026-10-09","2026-12-25","2027-01-01","2027-03-01","2027-05-05","2027-08-16","2027-10-04","2027-10-11","2027-12-27"];
-var DEFAULT_SITES = ["공항철도","이화다이아몬드공업","동국실업","청량리 오피스"];
 var DEFAULT_PHR = ["현장실사","견적서 작성","재견적서 작성","현장방문","시공","유지보수 점검","미팅","자재 발주"];
 var DEFAULT_TAIL = ["현퇴합니다","직퇴합니다","사무실 복귀합니다"];
 var DAYS = ["일","월","화","수","목","금","토"];
 
 function load(k, d){ try{ var v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } }
 function store(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+function splitLines(s){ return s.split("\n").map(function(x){ return x.trim(); }).filter(Boolean); }
+function uniq(a){ return a.filter(function(x, i){ return a.indexOf(x) === i; }); }
 
-var name = load("rh_name", DEFAULT_NAME);
+(function applyLink(){
+  try{
+    var q = new URLSearchParams(location.search);
+    var changed = false;
+    if(q.get("name")){ store("rh_name", q.get("name").trim()); changed = true; }
+    if(q.get("team")){ store("rh_team", uniq(q.get("team").split(/[,·]/).map(function(x){ return x.trim(); }).filter(Boolean))); changed = true; }
+    if(changed){ history.replaceState(null, "", location.pathname); }
+  }catch(e){}
+})();
+
+var name = load("rh_name", "");
+var team = load("rh_team", []);
 var hol = load("rh_hol", DEFAULT_HOL);
-var pinned = load("rh_sites", DEFAULT_SITES);
+var pinned = load("rh_sites", []);
 var phrases = load("rh_phr", DEFAULT_PHR);
 var tails = load("rh_tails", DEFAULT_TAIL);
 var reports = load("rh_reports", {});
@@ -133,12 +151,15 @@ function parse(s){ var p = s.split("-"); return new Date(+p[0], +p[1]-1, +p[2], 
 function today(){ var d = new Date(); d.setHours(12,0,0,0); return d; }
 function isWork(d){ var w = d.getDay(); return w !== 0 && w !== 6 && hol.indexOf(ymd(d)) === -1; }
 function nextWork(){ var d = today(); do { d.setDate(d.getDate()+1); } while(!isWork(d)); return d; }
-function header(d){ return "[업무보고]  " + pad(d.getMonth()+1) + "/" + pad(d.getDate()) + "(" + DAYS[d.getDay()] + ") " + name; }
-function splitLines(s){ return s.split("\n").map(function(x){ return x.trim(); }).filter(Boolean); }
+function dateLabel(d){ return pad(d.getMonth()+1) + "/" + pad(d.getDate()) + "(" + DAYS[d.getDay()] + ")"; }
 
 var cur = ymd(today());
+var withList = [];
 var lastField = "body";
 var $ = function(id){ return document.getElementById(id); };
+
+function people(){ return [name].concat(withList.filter(function(x){ return x !== name; })).filter(Boolean).join("·"); }
+function header(d){ return "[업무보고]  " + dateLabel(d) + " " + people(); }
 
 function lines(){
   return splitLines($("body").value).map(function(x){ return /^[-•·]/.test(x) ? "- " + x.replace(/^[-•·]\s*/, "") : "- " + x; });
@@ -153,27 +174,32 @@ function fullText(){
 }
 
 function setStatus(msg){ $("status").textContent = msg; }
+function refreshHeader(){
+  $("hdr").textContent = header(parse(cur));
+  $("nameWarn").hidden = !!name;
+  $("prev").textContent = fullText();
+}
 
 function persist(){
   var b = $("body").value, t = $("tail").value;
-  if(b.trim() || t.trim()){ reports[cur] = { body:b, tail:t, at:Date.now() }; }
+  if(b.trim() || t.trim() || withList.length){ reports[cur] = { body:b, tail:t, with:withList.slice(), at:Date.now() }; }
   else { delete reports[cur]; }
   var ok = store("rh_reports", reports);
   var n = new Date();
   setStatus(ok ? "저장됨 " + pad(n.getHours()) + ":" + pad(n.getMinutes()) : "저장 안 됨: 브라우저 저장공간 확인");
-  $("prev").textContent = fullText();
+  refreshHeader();
   renderHist();
 }
 
 var timer;
-function onEdit(){ clearTimeout(timer); timer = setTimeout(persist, 400); $("prev").textContent = fullText(); }
+function onEdit(){ clearTimeout(timer); timer = setTimeout(persist, 400); refreshHeader(); }
 
 function learnedSites(){
   var cnt = {}, last = {};
   Object.keys(reports).forEach(function(k){
     if(k === cur) return;
     var r = reports[k];
-    splitLines(r.body + "\n" + (r.tail || "")).forEach(function(l){
+    splitLines((r.body || "") + "\n" + (r.tail || "")).forEach(function(l){
       var w = l.replace(/^[-•·]\s*/, "").split(/\s+/)[0];
       if(!w || w.length < 2) return;
       if(phrases.indexOf(w) >= 0 || tails.indexOf(w) >= 0) return;
@@ -221,36 +247,55 @@ function insertInto(id, text, asLine){
   onEdit();
 }
 
-function chip(text, cls, onTap){
+function chip(text, cls, onTap, keepFocus){
   var b = document.createElement("button");
   b.type = "button"; b.className = "chip sm" + (cls ? " " + cls : ""); b.textContent = text;
-  b.addEventListener("pointerdown", function(e){ e.preventDefault(); });
-  b.addEventListener("mousedown", function(e){ e.preventDefault(); });
+  if(keepFocus){
+    b.addEventListener("pointerdown", function(e){ e.preventDefault(); });
+    b.addEventListener("mousedown", function(e){ e.preventDefault(); });
+  }
   b.addEventListener("click", onTap);
   return b;
 }
+function renderTeam(){
+  var box = $("team"); box.innerHTML = "";
+  var others = team.filter(function(x){ return x && x !== name; });
+  if(!others.length){ var n = document.createElement("span"); n.className = "none"; n.textContent = "설정에서 팀 직원을 입력하면 표시됩니다"; box.appendChild(n); return; }
+  others.forEach(function(w){
+    var b = chip(w, "", function(){
+      var i = withList.indexOf(w);
+      if(i >= 0) withList.splice(i, 1); else withList.push(w);
+      withList = team.filter(function(x){ return withList.indexOf(x) >= 0; });
+      b.setAttribute("aria-pressed", withList.indexOf(w) >= 0);
+      persist();
+    }, false);
+    b.setAttribute("aria-pressed", withList.indexOf(w) >= 0);
+    box.appendChild(b);
+  });
+}
 function renderChips(){
+  renderTeam();
   var s = $("sites"); s.innerHTML = "";
   var list = siteList();
   if(!list.length){ var n = document.createElement("span"); n.className = "none"; n.textContent = "설정에서 고정 현장을 추가하거나, 보고가 쌓이면 자동으로 표시됩니다"; s.appendChild(n); }
-  list.forEach(function(w){ s.appendChild(chip(w, "site", function(){ insertInto(lastField, w, true); })); });
+  list.forEach(function(w){ s.appendChild(chip(w, "site", function(){ insertInto(lastField, w, true); }, true)); });
   var p = $("phr"); p.innerHTML = "";
-  phrases.forEach(function(w){ p.appendChild(chip(w, "", function(){ insertInto(lastField, w, false); })); });
+  phrases.forEach(function(w){ p.appendChild(chip(w, "", function(){ insertInto(lastField, w, false); }, true)); });
   var t = $("tails"); t.innerHTML = "";
-  tails.forEach(function(w){ t.appendChild(chip(w, "", function(){ insertInto("tail", w, false); })); });
+  tails.forEach(function(w){ t.appendChild(chip(w, "", function(){ insertInto("tail", w, false); }, true)); });
 }
 
 function show(dateStr){
   cur = dateStr;
-  var r = reports[cur] || { body:"", tail:"" };
-  $("body").value = r.body; $("tail").value = r.tail;
-  $("body")._s = $("body")._e = r.body.length;
-  $("tail")._s = $("tail")._e = (r.tail || "").length;
+  var r = reports[cur] || { body:"", tail:"", with:[] };
+  withList = (r.with || []).slice();
+  $("body").value = r.body || ""; $("tail").value = r.tail || "";
+  $("body")._s = $("body")._e = $("body").value.length;
+  $("tail")._s = $("tail")._e = $("tail").value.length;
   $("pick").value = cur;
-  $("hdr").textContent = header(parse(cur));
   $("cToday").setAttribute("aria-pressed", cur === ymd(today()));
   $("cNext").setAttribute("aria-pressed", cur === ymd(nextWork()));
-  $("prev").textContent = fullText();
+  refreshHeader();
   setStatus(r.at ? "저장된 보고" : "");
   renderChips();
 }
@@ -260,10 +305,11 @@ function renderHist(){
   var keys = Object.keys(reports).sort().reverse();
   if(!keys.length){ var p = document.createElement("li"); p.className = "empty"; p.textContent = "아직 저장된 보고가 없습니다. 업무 내용을 적으면 자동 저장됩니다."; ul.appendChild(p); return; }
   keys.forEach(function(k){
+    var r = reports[k];
     var li = document.createElement("li");
     var o = document.createElement("button"); o.className = "open";
-    var d = document.createElement("span"); d.className = "d"; d.textContent = header(parse(k)).replace("[업무보고]  ", "").replace(" " + name, "");
-    var s = document.createElement("span"); s.className = "s"; s.textContent = (splitLines(reports[k].body)[0] || reports[k].tail || "");
+    var d = document.createElement("span"); d.className = "d"; d.textContent = dateLabel(parse(k)) + ((r.with && r.with.length) ? "  동행 " + r.with.join("·") : "");
+    var s = document.createElement("span"); s.className = "s"; s.textContent = (splitLines(r.body || "")[0] || r.tail || "");
     o.appendChild(d); o.appendChild(s);
     o.onclick = function(){ persist(); show(k); window.scrollTo(0,0); };
     var x = document.createElement("button"); x.className = "del"; x.textContent = "삭제";
@@ -275,6 +321,7 @@ function renderHist(){
 function toast(msg){ var t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(function(){ t.classList.remove("on"); }, 1600); }
 function fallbackCopy(s){ var ta = document.createElement("textarea"); ta.value = s; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); var ok = false; try{ ok = document.execCommand("copy"); }catch(e){} document.body.removeChild(ta); return ok; }
 function copy(s){
+  if(!name){ toast("설정에서 이름을 먼저 입력하세요"); $("cfgBox").open = true; return; }
   function done(ok){ toast(ok ? "복사됨" : "복사 실패: 미리보기를 길게 눌러 복사하세요"); }
   if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(s).then(function(){ done(true); }, function(){ done(fallbackCopy(s)); }); }
   else done(fallbackCopy(s));
@@ -290,20 +337,23 @@ $("copyHdr").onclick = function(){ copy(header(parse(cur)) + "\n\n- "); };
 
 function fillCfg(){
   $("name").value = name; $("hol").value = hol.join("\n");
+  $("cfgTeam").value = team.join("\n");
   $("cfgSites").value = pinned.join("\n"); $("cfgPhr").value = phrases.join("\n"); $("cfgTail").value = tails.join("\n");
 }
 $("save").onclick = function(){
-  name = $("name").value.trim() || DEFAULT_NAME;
+  name = $("name").value.trim();
+  team = uniq(splitLines($("cfgTeam").value));
   hol = $("hol").value.split(/\s+/).map(function(x){ return x.trim(); }).filter(function(x){ return /^\d{4}-\d{2}-\d{2}$/.test(x); });
   pinned = splitLines($("cfgSites").value);
   phrases = splitLines($("cfgPhr").value);
   tails = splitLines($("cfgTail").value);
-  store("rh_name", name); store("rh_hol", hol); store("rh_sites", pinned); store("rh_phr", phrases); store("rh_tails", tails);
+  store("rh_name", name); store("rh_team", team); store("rh_hol", hol); store("rh_sites", pinned); store("rh_phr", phrases); store("rh_tails", tails);
   fillCfg(); show(cur); renderHist(); toast("저장됨");
 };
 
 document.addEventListener("visibilitychange", function(){ if(document.hidden) persist(); });
 fillCfg(); show(cur); renderHist();
+if(!name){ $("cfgBox").open = true; }
 if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
 </script>
 </body>
