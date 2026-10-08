@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>업무보고</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e9eef2; --note:#ffffff; --bar:#5bc0e8; --barink:#1d3440; --ink:#1d262d; --sub:#5e6d78; --line:#d5dde3; --hit:#e3f4fb; --field:#f4f7f9;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#1f2226; --note:#323335; --ink:#f1f3f4; --sub:#a4adb4; --line:#45484c; --hit:#3b4a52; --field:#2a2b2d; }
+}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0; background:var(--bg); color:var(--ink); font-family:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif; font-size:16px; line-height:1.5}
+.note{max-width:520px; margin:12px auto; background:var(--note); border-radius:6px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.bar{background:var(--bar); min-height:42px; display:flex; align-items:center; justify-content:space-between; padding:0 14px; color:var(--barink); font-weight:600; font-size:15px}
+.bar small{font-weight:400; font-size:12px}
+.sec{padding:14px 16px}
+.days{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
+.chip{font:inherit; font-size:14px; border:1px solid var(--line); background:transparent; color:var(--ink); padding:6px 12px; border-radius:16px; cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--bar); border-color:var(--bar); color:var(--barink); font-weight:600}
+.days input[type=date]{font:inherit; font-size:14px; color:var(--ink); background:var(--field); border:1px solid var(--line); border-radius:16px; padding:5px 10px; max-width:160px}
+.hdr{font-size:19px; font-weight:600; margin:14px 0 4px; word-break:keep-all}
+label{display:block; font-size:13px; color:var(--sub); margin:12px 0 4px}
+textarea,input[type=text]{width:100%; font:inherit; font-size:16px; color:var(--ink); background:var(--field); border:1px solid var(--line); border-radius:4px; padding:10px}
+textarea{min-height:170px; resize:vertical; line-height:1.6}
+textarea:focus,input:focus,.chip:focus-visible,button:focus-visible{outline:2px solid var(--bar); outline-offset:1px}
+.acts{display:flex; gap:8px; margin-top:14px}
+.btn{flex:1; font:inherit; font-size:15px; padding:12px; border-radius:6px; cursor:pointer; border:1px solid var(--line); background:transparent; color:var(--ink)}
+.btn.main{flex:2; background:var(--bar); border-color:var(--bar); color:var(--barink); font-weight:600}
+.prev{white-space:pre-wrap; font-size:14px; color:var(--sub); background:var(--field); border-radius:4px; padding:10px; margin-top:12px}
+.foot{border-top:1px solid var(--line); padding:4px 16px 12px}
+details summary{cursor:pointer; color:var(--sub); font-size:14px; padding:10px 0}
+.hist{list-style:none; margin:0; padding:0}
+.hist li{display:flex; gap:8px; align-items:center; border-bottom:1px solid var(--line)}
+.hist button.open{flex:1; text-align:left; font:inherit; background:transparent; border:0; color:var(--ink); padding:10px 4px; cursor:pointer}
+.hist .d{font-weight:600; font-size:14px}
+.hist .s{display:block; font-size:13px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:360px}
+.hist button.del{font:inherit; font-size:13px; background:transparent; border:0; color:var(--sub); padding:8px; cursor:pointer}
+.empty{font-size:13px; color:var(--sub); padding:4px 0 8px}
+.save{margin-top:10px; font:inherit; font-size:14px; padding:8px 16px; border:0; border-radius:4px; background:var(--bar); color:var(--barink); font-weight:600; cursor:pointer}
+.toast{position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%) translateY(20px); background:#1d262d; color:#fff; padding:10px 18px; border-radius:20px; font-size:14px; opacity:0; transition:.2s; pointer-events:none}
+.toast.on{opacity:1; transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion: reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+<div class="note">
+  <div class="bar"><span>업무보고</span><small id="status"></small></div>
+  <div class="sec">
+    <div class="days">
+      <button class="chip" id="cToday">오늘</button>
+      <button class="chip" id="cNext">다음 근무일</button>
+      <input type="date" id="pick" aria-label="날짜 선택">
+    </div>
+    <div class="hdr" id="hdr"></div>
+    <label for="body">업무 내용 (한 줄에 하나씩, "- "는 자동으로 붙습니다)</label>
+    <textarea id="body" placeholder="이화다이아몬드공업 본사 현장실사 및 견적서 작업"></textarea>
+    <label for="tail">마무리 문구 (선택)</label>
+    <input type="text" id="tail" placeholder="공항철도 운서역 현퇴합니다">
+    <div class="acts">
+      <button class="btn main" id="copyAll">전체 복사</button>
+      <button class="btn" id="copyHdr">헤더만 복사</button>
+    </div>
+    <div class="prev" id="prev"></div>
+  </div>
+  <div class="foot">
+    <details>
+      <summary>지난 보고</summary>
+      <ul class="hist" id="hist"></ul>
+    </details>
+    <details>
+      <summary>이름·공휴일 설정</summary>
+      <label for="name">이름</label>
+      <input id="name" type="text">
+      <label for="hol">공휴일 (한 줄에 하나, 2026-10-09 형식)</label>
+      <textarea id="hol"></textarea>
+      <button class="save" id="save">저장</button>
+    </details>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+var DEFAULT_NAME = "이두성";
+var DEFAULT_HOL = ["2026-10-09","2026-12-25","2027-01-01","2027-03-01","2027-05-05","2027-08-16","2027-10-04","2027-10-11","2027-12-27"];
+var DAYS = ["일","월","화","수","목","금","토"];
+
+function load(k, d){ try{ var v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } }
+function store(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+
+var name = load("rh_name", DEFAULT_NAME);
+var hol = load("rh_hol", DEFAULT_HOL);
+var reports = load("rh_reports", {});
+
+function pad(n){ return (n < 10 ? "0" : "") + n; }
+function ymd(d){ return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate()); }
+function parse(s){ var p = s.split("-"); return new Date(+p[0], +p[1]-1, +p[2], 12); }
+function today(){ var d = new Date(); d.setHours(12,0,0,0); return d; }
+function isWork(d){ var w = d.getDay(); return w !== 0 && w !== 6 && hol.indexOf(ymd(d)) === -1; }
+function nextWork(){ var d = today(); do { d.setDate(d.getDate()+1); } while(!isWork(d)); return d; }
+function header(d){ return "[업무보고]  " + pad(d.getMonth()+1) + "/" + pad(d.getDate()) + "(" + DAYS[d.getDay()] + ") " + name; }
+
+var cur = ymd(today());
+var $ = function(id){ return document.getElementById(id); };
+
+function lines(){
+  return $("body").value.split("\n").map(function(x){ return x.trim(); }).filter(Boolean)
+    .map(function(x){ return /^[-•·]/.test(x) ? "- " + x.replace(/^[-•·]\s*/, "") : "- " + x; });
+}
+function fullText(){
+  var out = header(parse(cur));
+  var ls = lines();
+  out += "\n\n" + (ls.length ? ls.join("\n") : "- ");
+  var t = $("tail").value.trim();
+  if(t) out += "\n\n" + t;
+  return out;
+}
+
+function setStatus(msg){ $("status").textContent = msg; }
+
+function persist(){
+  var b = $("body").value, t = $("tail").value;
+  if(b.trim() || t.trim()){ reports[cur] = { body:b, tail:t, at:Date.now() }; }
+  else { delete reports[cur]; }
+  var ok = store("rh_reports", reports);
+  var n = new Date();
+  setStatus(ok ? "저장됨 " + pad(n.getHours()) + ":" + pad(n.getMinutes()) : "저장 안 됨: 브라우저 저장공간 확인");
+  $("prev").textContent = fullText();
+  renderHist();
+}
+
+var timer;
+function onEdit(){ clearTimeout(timer); timer = setTimeout(persist, 400); $("prev").textContent = fullText(); }
+
+function show(dateStr){
+  cur = dateStr;
+  var r = reports[cur] || { body:"", tail:"" };
+  $("body").value = r.body; $("tail").value = r.tail;
+  $("pick").value = cur;
+  $("hdr").textContent = header(parse(cur));
+  $("cToday").setAttribute("aria-pressed", cur === ymd(today()));
+  $("cNext").setAttribute("aria-pressed", cur === ymd(nextWork()));
+  $("prev").textContent = fullText();
+  setStatus(r.at ? "저장된 보고" : "");
+}
+
+function renderHist(){
+  var ul = $("hist"); ul.innerHTML = "";
+  var keys = Object.keys(reports).sort().reverse();
+  if(!keys.length){ var p = document.createElement("li"); p.className = "empty"; p.textContent = "아직 저장된 보고가 없습니다. 업무 내용을 적으면 자동 저장됩니다."; ul.appendChild(p); return; }
+  keys.forEach(function(k){
+    var li = document.createElement("li");
+    var o = document.createElement("button"); o.className = "open";
+    var d = document.createElement("span"); d.className = "d"; d.textContent = header(parse(k)).replace("[업무보고]  ", "").replace(" " + name, "");
+    var s = document.createElement("span"); s.className = "s"; s.textContent = (reports[k].body.split("\n").filter(function(x){return x.trim();})[0] || reports[k].tail || "");
+    o.appendChild(d); o.appendChild(s);
+    o.onclick = function(){ show(k); window.scrollTo(0,0); };
+    var x = document.createElement("button"); x.className = "del"; x.textContent = "삭제";
+    x.onclick = function(){ if(confirm(k + " 보고를 삭제할까요?")){ delete reports[k]; store("rh_reports", reports); if(k === cur) show(cur); renderHist(); toast("삭제됨"); } };
+    li.appendChild(o); li.appendChild(x); ul.appendChild(li);
+  });
+}
+
+function toast(msg){ var t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(function(){ t.classList.remove("on"); }, 1600); }
+function fallbackCopy(s){ var ta = document.createElement("textarea"); ta.value = s; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); var ok = false; try{ ok = document.execCommand("copy"); }catch(e){} document.body.removeChild(ta); return ok; }
+function copy(s){
+  function done(ok){ toast(ok ? "복사됨" : "복사 실패: 미리보기를 길게 눌러 복사하세요"); }
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(s).then(function(){ done(true); }, function(){ done(fallbackCopy(s)); }); }
+  else done(fallbackCopy(s));
+}
+
+$("body").addEventListener("input", onEdit);
+$("tail").addEventListener("input", onEdit);
+$("cToday").onclick = function(){ persist(); show(ymd(today())); };
+$("cNext").onclick = function(){ persist(); show(ymd(nextWork())); };
+$("pick").onchange = function(){ if(this.value){ persist(); show(this.value); } };
+$("copyAll").onclick = function(){ persist(); copy(fullText()); };
+$("copyHdr").onclick = function(){ copy(header(parse(cur)) + "\n\n- "); };
+
+$("name").value = name; $("hol").value = hol.join("\n");
+$("save").onclick = function(){
+  name = $("name").value.trim() || DEFAULT_NAME;
+  hol = $("hol").value.split(/\s+/).map(function(x){ return x.trim(); }).filter(function(x){ return /^\d{4}-\d{2}-\d{2}$/.test(x); });
+  store("rh_name", name); store("rh_hol", hol);
+  $("hol").value = hol.join("\n");
+  show(cur); renderHist(); toast("저장됨");
+};
+
+document.addEventListener("visibilitychange", function(){ if(document.hidden) persist(); });
+show(cur); renderHist();
+</script>
+</body>
+</html>
