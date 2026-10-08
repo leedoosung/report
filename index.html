@@ -3,8 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#5bc0e8">
 <title>업무보고</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600&display=swap" rel="stylesheet">
@@ -27,11 +30,17 @@ body{margin:0; background:var(--bg); color:var(--ink); font-family:"IBM Plex San
 .days{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
 .chip{font:inherit; font-size:14px; border:1px solid var(--line); background:transparent; color:var(--ink); padding:6px 12px; border-radius:16px; cursor:pointer}
 .chip[aria-pressed="true"]{background:var(--bar); border-color:var(--bar); color:var(--barink); font-weight:600}
+.chip.sm{font-size:13px; padding:5px 11px; background:var(--field)}
+.chip.sm:active{background:var(--hit)}
+.chip.site{border-color:var(--bar)}
 .days input[type=date]{font:inherit; font-size:14px; color:var(--ink); background:var(--field); border:1px solid var(--line); border-radius:16px; padding:5px 10px; max-width:160px}
 .hdr{font-size:19px; font-weight:600; margin:14px 0 4px; word-break:keep-all}
 label{display:block; font-size:13px; color:var(--sub); margin:12px 0 4px}
+.qlabel{display:block; font-size:12px; color:var(--sub); margin:10px 0 4px}
+.chips{display:flex; flex-wrap:wrap; gap:6px}
+.chips .none{font-size:12px; color:var(--sub)}
 textarea,input[type=text]{width:100%; font:inherit; font-size:16px; color:var(--ink); background:var(--field); border:1px solid var(--line); border-radius:4px; padding:10px}
-textarea{min-height:170px; resize:vertical; line-height:1.6}
+textarea{min-height:150px; resize:vertical; line-height:1.6}
 textarea:focus,input:focus,.chip:focus-visible,button:focus-visible{outline:2px solid var(--bar); outline-offset:1px}
 .acts{display:flex; gap:8px; margin-top:14px}
 .btn{flex:1; font:inherit; font-size:15px; padding:12px; border-radius:6px; cursor:pointer; border:1px solid var(--line); background:transparent; color:var(--ink)}
@@ -46,6 +55,7 @@ details summary{cursor:pointer; color:var(--sub); font-size:14px; padding:10px 0
 .hist .s{display:block; font-size:13px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:360px}
 .hist button.del{font:inherit; font-size:13px; background:transparent; border:0; color:var(--sub); padding:8px; cursor:pointer}
 .empty{font-size:13px; color:var(--sub); padding:4px 0 8px}
+.cfg textarea{min-height:110px; font-size:14px}
 .save{margin-top:10px; font:inherit; font-size:14px; padding:8px 16px; border:0; border-radius:4px; background:var(--bar); color:var(--barink); font-weight:600; cursor:pointer}
 .toast{position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%) translateY(20px); background:#1d262d; color:#fff; padding:10px 18px; border-radius:20px; font-size:14px; opacity:0; transition:.2s; pointer-events:none}
 .toast.on{opacity:1; transform:translateX(-50%) translateY(0)}
@@ -63,9 +73,14 @@ details summary{cursor:pointer; color:var(--sub); font-size:14px; padding:10px 0
     </div>
     <div class="hdr" id="hdr"></div>
     <label for="body">업무 내용 (한 줄에 하나씩, "- "는 자동으로 붙습니다)</label>
-    <textarea id="body" placeholder="이화다이아몬드공업 본사 현장실사 및 견적서 작업"></textarea>
+    <textarea id="body" placeholder="현장 버튼 → 업무 버튼 순서로 누르면 한 줄이 완성됩니다"></textarea>
+    <span class="qlabel">현장 (누르면 새 줄로 입력)</span>
+    <div class="chips" id="sites"></div>
+    <span class="qlabel">업무 문구</span>
+    <div class="chips" id="phr"></div>
     <label for="tail">마무리 문구 (선택)</label>
     <input type="text" id="tail" placeholder="공항철도 운서역 현퇴합니다">
+    <div class="chips" id="tails" style="margin-top:6px"></div>
     <div class="acts">
       <button class="btn main" id="copyAll">전체 복사</button>
       <button class="btn" id="copyHdr">헤더만 복사</button>
@@ -77,10 +92,16 @@ details summary{cursor:pointer; color:var(--sub); font-size:14px; padding:10px 0
       <summary>지난 보고</summary>
       <ul class="hist" id="hist"></ul>
     </details>
-    <details>
-      <summary>이름·공휴일 설정</summary>
+    <details class="cfg">
+      <summary>설정 (이름·현장·문구·공휴일)</summary>
       <label for="name">이름</label>
       <input id="name" type="text">
+      <label for="cfgSites">고정 현장 (한 줄에 하나, 항상 앞쪽에 표시)</label>
+      <textarea id="cfgSites"></textarea>
+      <label for="cfgPhr">업무 문구 (한 줄에 하나)</label>
+      <textarea id="cfgPhr"></textarea>
+      <label for="cfgTail">마무리 문구 (한 줄에 하나)</label>
+      <textarea id="cfgTail"></textarea>
       <label for="hol">공휴일 (한 줄에 하나, 2026-10-09 형식)</label>
       <textarea id="hol"></textarea>
       <button class="save" id="save">저장</button>
@@ -91,6 +112,9 @@ details summary{cursor:pointer; color:var(--sub); font-size:14px; padding:10px 0
 <script>
 var DEFAULT_NAME = "이두성";
 var DEFAULT_HOL = ["2026-10-09","2026-12-25","2027-01-01","2027-03-01","2027-05-05","2027-08-16","2027-10-04","2027-10-11","2027-12-27"];
+var DEFAULT_SITES = ["공항철도","이화다이아몬드공업","동국실업","청량리 오피스"];
+var DEFAULT_PHR = ["현장실사","견적서 작성","재견적서 작성","현장방문","시공","유지보수 점검","미팅","자재 발주"];
+var DEFAULT_TAIL = ["현퇴합니다","직퇴합니다","사무실 복귀합니다"];
 var DAYS = ["일","월","화","수","목","금","토"];
 
 function load(k, d){ try{ var v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } }
@@ -98,6 +122,9 @@ function store(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return tr
 
 var name = load("rh_name", DEFAULT_NAME);
 var hol = load("rh_hol", DEFAULT_HOL);
+var pinned = load("rh_sites", DEFAULT_SITES);
+var phrases = load("rh_phr", DEFAULT_PHR);
+var tails = load("rh_tails", DEFAULT_TAIL);
 var reports = load("rh_reports", {});
 
 function pad(n){ return (n < 10 ? "0" : "") + n; }
@@ -107,13 +134,14 @@ function today(){ var d = new Date(); d.setHours(12,0,0,0); return d; }
 function isWork(d){ var w = d.getDay(); return w !== 0 && w !== 6 && hol.indexOf(ymd(d)) === -1; }
 function nextWork(){ var d = today(); do { d.setDate(d.getDate()+1); } while(!isWork(d)); return d; }
 function header(d){ return "[업무보고]  " + pad(d.getMonth()+1) + "/" + pad(d.getDate()) + "(" + DAYS[d.getDay()] + ") " + name; }
+function splitLines(s){ return s.split("\n").map(function(x){ return x.trim(); }).filter(Boolean); }
 
 var cur = ymd(today());
+var lastField = "body";
 var $ = function(id){ return document.getElementById(id); };
 
 function lines(){
-  return $("body").value.split("\n").map(function(x){ return x.trim(); }).filter(Boolean)
-    .map(function(x){ return /^[-•·]/.test(x) ? "- " + x.replace(/^[-•·]\s*/, "") : "- " + x; });
+  return splitLines($("body").value).map(function(x){ return /^[-•·]/.test(x) ? "- " + x.replace(/^[-•·]\s*/, "") : "- " + x; });
 }
 function fullText(){
   var out = header(parse(cur));
@@ -140,16 +168,91 @@ function persist(){
 var timer;
 function onEdit(){ clearTimeout(timer); timer = setTimeout(persist, 400); $("prev").textContent = fullText(); }
 
+function learnedSites(){
+  var cnt = {}, last = {};
+  Object.keys(reports).forEach(function(k){
+    if(k === cur) return;
+    var r = reports[k];
+    splitLines(r.body + "\n" + (r.tail || "")).forEach(function(l){
+      var w = l.replace(/^[-•·]\s*/, "").split(/\s+/)[0];
+      if(!w || w.length < 2) return;
+      if(phrases.indexOf(w) >= 0 || tails.indexOf(w) >= 0) return;
+      cnt[w] = (cnt[w] || 0) + 1;
+      if(!last[w] || k > last[w]) last[w] = k;
+    });
+  });
+  return Object.keys(cnt).sort(function(a, b){ return (cnt[b] - cnt[a]) || (last[b] > last[a] ? 1 : -1); });
+}
+function siteList(){
+  var out = pinned.slice();
+  learnedSites().forEach(function(w){
+    if(out.length >= 12) return;
+    var dup = out.some(function(p){ return p === w || p.split(/\s+/)[0] === w; });
+    if(!dup) out.push(w);
+  });
+  return out;
+}
+
+function remember(el){ el._s = el.selectionStart; el._e = el.selectionEnd; }
+["body","tail"].forEach(function(id){
+  var el = $(id);
+  el.addEventListener("focus", function(){ lastField = id; });
+  ["blur","keyup","click","input","select"].forEach(function(ev){ el.addEventListener(ev, function(){ remember(el); }); });
+});
+
+function insertInto(id, text, asLine){
+  var el = $(id), v = el.value;
+  var s = (el._s == null) ? v.length : el._s;
+  var e = (el._e == null) ? s : el._e;
+  var before = v.slice(0, s), after = v.slice(e);
+  var ins = text;
+  if(asLine && id === "body"){
+    var lineText = before.slice(before.lastIndexOf("\n") + 1);
+    if(lineText.trim()) ins = "\n" + ins;
+  } else if(before && !/\s$/.test(before)){
+    ins = " " + ins;
+  }
+  if(asLine) ins += " ";
+  el.value = before + ins + after;
+  var pos = (before + ins).length;
+  el.focus();
+  try{ el.setSelectionRange(pos, pos); }catch(err){}
+  el._s = pos; el._e = pos;
+  onEdit();
+}
+
+function chip(text, cls, onTap){
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "chip sm" + (cls ? " " + cls : ""); b.textContent = text;
+  b.addEventListener("pointerdown", function(e){ e.preventDefault(); });
+  b.addEventListener("mousedown", function(e){ e.preventDefault(); });
+  b.addEventListener("click", onTap);
+  return b;
+}
+function renderChips(){
+  var s = $("sites"); s.innerHTML = "";
+  var list = siteList();
+  if(!list.length){ var n = document.createElement("span"); n.className = "none"; n.textContent = "설정에서 고정 현장을 추가하거나, 보고가 쌓이면 자동으로 표시됩니다"; s.appendChild(n); }
+  list.forEach(function(w){ s.appendChild(chip(w, "site", function(){ insertInto(lastField, w, true); })); });
+  var p = $("phr"); p.innerHTML = "";
+  phrases.forEach(function(w){ p.appendChild(chip(w, "", function(){ insertInto(lastField, w, false); })); });
+  var t = $("tails"); t.innerHTML = "";
+  tails.forEach(function(w){ t.appendChild(chip(w, "", function(){ insertInto("tail", w, false); })); });
+}
+
 function show(dateStr){
   cur = dateStr;
   var r = reports[cur] || { body:"", tail:"" };
   $("body").value = r.body; $("tail").value = r.tail;
+  $("body")._s = $("body")._e = r.body.length;
+  $("tail")._s = $("tail")._e = (r.tail || "").length;
   $("pick").value = cur;
   $("hdr").textContent = header(parse(cur));
   $("cToday").setAttribute("aria-pressed", cur === ymd(today()));
   $("cNext").setAttribute("aria-pressed", cur === ymd(nextWork()));
   $("prev").textContent = fullText();
   setStatus(r.at ? "저장된 보고" : "");
+  renderChips();
 }
 
 function renderHist(){
@@ -160,11 +263,11 @@ function renderHist(){
     var li = document.createElement("li");
     var o = document.createElement("button"); o.className = "open";
     var d = document.createElement("span"); d.className = "d"; d.textContent = header(parse(k)).replace("[업무보고]  ", "").replace(" " + name, "");
-    var s = document.createElement("span"); s.className = "s"; s.textContent = (reports[k].body.split("\n").filter(function(x){return x.trim();})[0] || reports[k].tail || "");
+    var s = document.createElement("span"); s.className = "s"; s.textContent = (splitLines(reports[k].body)[0] || reports[k].tail || "");
     o.appendChild(d); o.appendChild(s);
-    o.onclick = function(){ show(k); window.scrollTo(0,0); };
+    o.onclick = function(){ persist(); show(k); window.scrollTo(0,0); };
     var x = document.createElement("button"); x.className = "del"; x.textContent = "삭제";
-    x.onclick = function(){ if(confirm(k + " 보고를 삭제할까요?")){ delete reports[k]; store("rh_reports", reports); if(k === cur) show(cur); renderHist(); toast("삭제됨"); } };
+    x.onclick = function(){ if(confirm(k + " 보고를 삭제할까요?")){ delete reports[k]; store("rh_reports", reports); if(k === cur) show(cur); renderHist(); renderChips(); toast("삭제됨"); } };
     li.appendChild(o); li.appendChild(x); ul.appendChild(li);
   });
 }
@@ -185,17 +288,23 @@ $("pick").onchange = function(){ if(this.value){ persist(); show(this.value); } 
 $("copyAll").onclick = function(){ persist(); copy(fullText()); };
 $("copyHdr").onclick = function(){ copy(header(parse(cur)) + "\n\n- "); };
 
-$("name").value = name; $("hol").value = hol.join("\n");
+function fillCfg(){
+  $("name").value = name; $("hol").value = hol.join("\n");
+  $("cfgSites").value = pinned.join("\n"); $("cfgPhr").value = phrases.join("\n"); $("cfgTail").value = tails.join("\n");
+}
 $("save").onclick = function(){
   name = $("name").value.trim() || DEFAULT_NAME;
   hol = $("hol").value.split(/\s+/).map(function(x){ return x.trim(); }).filter(function(x){ return /^\d{4}-\d{2}-\d{2}$/.test(x); });
-  store("rh_name", name); store("rh_hol", hol);
-  $("hol").value = hol.join("\n");
-  show(cur); renderHist(); toast("저장됨");
+  pinned = splitLines($("cfgSites").value);
+  phrases = splitLines($("cfgPhr").value);
+  tails = splitLines($("cfgTail").value);
+  store("rh_name", name); store("rh_hol", hol); store("rh_sites", pinned); store("rh_phr", phrases); store("rh_tails", tails);
+  fillCfg(); show(cur); renderHist(); toast("저장됨");
 };
 
 document.addEventListener("visibilitychange", function(){ if(document.hidden) persist(); });
-show(cur); renderHist();
+fillCfg(); show(cur); renderHist();
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
 </script>
 </body>
 </html>
